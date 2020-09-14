@@ -1,0 +1,8 @@
+.DS_Store
+postgresql-*
+*.a
+xcuserdata
+libressl-*
+output
+/libpq-test/*.xcframework
+/libpq-test/libpq-test.xcodeproj/project.xcworkspace/xcshareddata
