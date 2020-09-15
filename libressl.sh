@@ -94,9 +94,11 @@ makeLibreSSL() {
 moveLibreSSLOutputInPlace() {
   local target=$1
   local output=$2
-  cp crypto/.libs/libcrypto.a $output/$target/lib
-  cp ssl/.libs/libssl.a $output/$target/lib
-  # cp include .... $OUTPUT/$target/include # which one is this?
+  cp crypto/.libs/libcrypto.a $OUTPUT/$target/lib
+  cp ssl/.libs/libssl.a $OUTPUT/$target/lib
+  cp -R include/compat $OUTPUT/$target/include
+  cp -R include/openssl $OUTPUT/$target/include
+  cp include/*.h $OUTPUT/$target/include
 }
 
 needsRebuilding() {
