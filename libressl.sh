@@ -304,7 +304,7 @@ fi;
 target=catalyst_arm64
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
   
-  printf "\n\n--> macOS Catalyst arm64e libssl Compilation"
+  printf "\n\n--> macOS Catalyst arm64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
   SDKROOT=$DEVROOT/SDKs/MacOSX${MACOSX}.sdk
@@ -317,7 +317,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
     LD="/usr/bin/ld"
 
   makeLibreSSL
-  printf "\n\n--> XX macOS Catalyst arm64e libssl Compilation"
+  printf "\n\n--> XX macOS Catalyst arm64 libssl Compilation"
   moveLibreSSLOutputInPlace $target $OUTPUT
 
 fi;
