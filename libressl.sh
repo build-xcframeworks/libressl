@@ -11,7 +11,12 @@ IFS=':' read -r -a libressl_link_targets <<< "$LIBRESSL_LINK_TARGETS"
 
 if [ -z "$IOS" ]
 then
-  IOS=13.7 # 14.0
+  IOS=`xcrun -sdk iphoneos --show-sdk-version`
+fi
+
+if [ -z "$MIN_IOS_VERSION" ]
+then
+  MIN_IOS_VERSION=13.0
 fi
 
 if [ -z "$LIBRESSL" ]
@@ -23,7 +28,7 @@ fi
 
 if [ -z "$MACOSX" ]
 then
-  MACOSX=10.15 #11.0
+  MACOSX=`xcrun --sdk macosx --show-sdk-version|cut -d '.' -f 1-2`
 fi
 
 declare -a all_targets=("ios-arm64" "ios-arm64e" "simulator_x86_64" "simulator_x86_64h" "simulator_arm64e" "simulator_arm64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_x86_64h" "macos_arm64")
@@ -131,7 +136,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   ./configure --host=x86_64-apple-darwin --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang" \
     CPPFLAGS="-I$SDKROOT/usr/include/" \
-    CFLAGS="$CPPFLAGS -arch x86_64h -miphoneos-version-min=${IOS} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
+    CFLAGS="$CPPFLAGS -arch x86_64h -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
     LD=$DEVROOT/usr/bin/ld
 
@@ -161,7 +166,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   ./configure --host=x86_64-apple-darwin --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang" \
     CPPFLAGS="-I$SDKROOT/usr/include/" \
-    CFLAGS="$CPPFLAGS -arch x86_64 -miphoneos-version-min=${IOS} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
+    CFLAGS="$CPPFLAGS -arch x86_64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
     LD=$DEVROOT/usr/bin/ld
 
@@ -186,7 +191,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang" \
     CPPFLAGS="-I$SDKROOT/usr/include/" \
-    CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${IOS} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
+    CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
     LD=$DEVROOT/usr/bin/ld
 
@@ -211,7 +216,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang" \
     CPPFLAGS="-I$SDKROOT/usr/include/" \
-    CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${IOS} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
+    CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
     LD=$DEVROOT/usr/bin/ld
 
@@ -237,7 +242,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang -isysroot $SDKROOT" \
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
-    CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${IOS} -pipe -no-cpp-precomp" \
+    CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp" \
     CPP="/usr/bin/cpp -D__arm__=1 $CPPFLAGS" \
     LD=$DEVROOT/usr/bin/ld
 
@@ -262,7 +267,7 @@ if elementIn "$target" "${libressl_build_targets[@]}"; then
   ./configure --host=aarch64-apple-darwin19 --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang -isysroot $SDKROOT" \
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
-    CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${IOS} -pipe -no-cpp-precomp" \
+    CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp" \
     CPP="/usr/bin/cpp -D__arm__=1 $CPPFLAGS" \
     LD=$DEVROOT/usr/bin/ld
 
