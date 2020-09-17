@@ -96,9 +96,7 @@ moveLibreSSLOutputInPlace() {
   local output=$2
   cp crypto/.libs/libcrypto.a $OUTPUT/$target/lib
   cp ssl/.libs/libssl.a $OUTPUT/$target/lib
-  cp -R include/compat $OUTPUT/$target/include
-  cp -R include/openssl $OUTPUT/$target/include
-  cp include/*.h $OUTPUT/$target/include
+  rsync -am --include='*.h' -f 'hide,! */' include/* $OUTPUT/$target/include
 }
 
 needsRebuilding() {
@@ -126,7 +124,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
 
 
   printf "\n\n--> iOS Simulator x86_64h libssl Compilation"
-  
+
   DEVROOT=$XCODE/Platforms/iPhoneSimulator.platform/Developer
   SDKROOT=$DEVROOT/SDKs/iPhoneSimulator${IOS}.sdk
 
@@ -149,7 +147,7 @@ fi;
 
 target=simulator_x86_64
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> iOS Simulator x86_64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/iPhoneSimulator.platform/Developer
@@ -179,7 +177,7 @@ fi;
 
 target=simulator_arm64e
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> iOS Simulator arm64e libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/iPhoneSimulator.platform/Developer
@@ -204,7 +202,7 @@ fi;
 
 target=simulator_arm64
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> iOS Simulator arm64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/iPhoneSimulator.platform/Developer
@@ -220,7 +218,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   makeLibreSSL
   printf "\n\n--> XX iOS Simulator arm64 libssl Compilation"
   moveLibreSSLOutputInPlace $target $OUTPUT
-  
+
 fi;
 
 
@@ -230,7 +228,7 @@ fi;
 
 target=ios-arm64
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> iOS arm64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/iPhoneOS.platform/Developer
@@ -255,7 +253,7 @@ fi;
 
 target=ios-arm64e
 if elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> iOS arm64e libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/iPhoneOS.platform/Developer
@@ -280,7 +278,7 @@ fi;
 
 target=catalyst_x86_64
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> macOS Catalyst x86_64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
@@ -299,13 +297,14 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
 
 fi;
 
+# TODO: Fails on latest Big Sur
 #############################################
 ##  macOS Catalyst arm64 libssl Compilation
 #############################################
 
 target=catalyst_arm64
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> macOS Catalyst arm64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
@@ -331,7 +330,7 @@ fi;
 
 target=macos_x86_64
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> macOS x86_64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
@@ -357,7 +356,7 @@ fi;
 
 target=macos_x86_64h
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> macOS x86_64h libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
@@ -382,7 +381,7 @@ fi;
 
 target=macos_arm64
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> macOS arm64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
@@ -408,7 +407,7 @@ fi;
 
 target=macos_arm64e
 if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
-  
+
   printf "\n\n--> macOS arm64e libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
@@ -428,35 +427,167 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
 fi;
 
 
-##################################
-## Make XCFrameworks for LibreSSL
-##################################
+####################################
+## lipo & XCFrameworks for LibreSSL
+####################################
 
-XCFRAMEWORK_CMD="xcodebuild -create-xcframework"
+## lipo & XCFramework
+
+macos=()
+catalyst=()
+simulator=()
+ios=()
+
+
 for target in "${libressl_link_targets[@]}"
 do
-  XCFRAMEWORK_CMD="$XCFRAMEWORK_CMD -library $OUTPUT/$target/lib/libcrypto.a"
-  #XCFRAMEWORK_CMD="$XCFRAMEWORK_CMD -library $OUTPUT/$target/lib/libssl.a" # should we merge libcrypto and libssl, or make two separate frameworks. If two, what header files belong to what framework?
-  XCFRAMEWORK_CMD="$XCFRAMEWORK_CMD -headers $OUTPUT/$target/include"
+  if [[ $target == "ios-"* ]]; then
+    ios+=($target)
+  fi
+  if [[ $target == "simulator_"* ]]; then
+    simulator+=($target)
+  fi
+  if [[ $target == "catalyst_"* ]]; then
+    catalyst+=($target)
+  fi
+  if [[ $target == "macos_"* ]]; then
+    macos+=($target)
+  fi
 done
-#XCFRAMEWORK_CMD="$XCFRAMEWORK_CMD -output $XCFRAMEWORKS/libressl.xcframework"
-XCFRAMEWORK_CMD="$XCFRAMEWORK_CMD -output $XCFRAMEWORKS/libcrypto.xcframework"
-printf "\n\n--> XCFramework"
-echo $XCFRAMEWORK_CMD
-rm -R $XCFRAMEWORKS
-eval $XCFRAMEWORK_CMD
+
+XCFRAMEWORK_LIBSSL_CMD="xcodebuild -create-xcframework"
+XCFRAMEWORK_LIBCRYPTO_CMD="xcodebuild -create-xcframework"
+
+framework_targets=()
+
+if [ ${#ios[@]} -gt 0 ]; then
+  lipo_libssl="lipo -create "
+  lipo_libcrypto="lipo -create "
+
+  framework_targets+=("ios")
+  mkdir -p $OUTPUT/ios/lib
+  mkdir -p $OUTPUT/ios/include
+
+  for target in "${ios[@]}"
+  do
+    lipo_libssl="$lipo_libssl $OUTPUT/$target/lib/libssl.a"
+    lipo_libcrypto="$lipo_libcrypto $OUTPUT/$target/lib/libcrypto.a"
+    rsync -a $OUTPUT/$target/include/* $OUTPUT/ios/include
+  done
+
+  lipo_libssl="$lipo_libssl -output $OUTPUT/ios/lib/libssl.a"
+  echo $lipo_libssl
+  eval $lipo_libssl
+
+  lipo_libcrypto="$lipo_libcrypto -output $OUTPUT/ios/lib/libcrypto.a"
+  echo $lipo_libcrypto
+  eval $lipo_libcrypto
+
+  XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -library $OUTPUT/ios/lib/libssl.a"
+  XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -headers $OUTPUT/ios/include"
+
+  XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -library $OUTPUT/ios/lib/libcrypto.a"
+  XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -headers $OUTPUT/ios/include"
+fi
+
+if [ ${#catalyst[@]} -gt 0 ]; then
+  lipo_libssl="lipo -create "
+  lipo_libcrypto="lipo -create "
+
+  framework_targets+=("catalyst")
+  mkdir -p $OUTPUT/catalyst/lib
+  mkdir -p $OUTPUT/catalyst/include
+
+  for target in "${catalyst[@]}"
+  do
+    lipo_libssl="$lipo_libssl $OUTPUT/$target/lib/libssl.a"
+    lipo_libcrypto="$lipo_libcrypto $OUTPUT/$target/lib/libcrypto.a"
+    rsync -a $OUTPUT/$target/include/* $OUTPUT/catalyst/include
+  done
+
+  lipo_libssl="$lipo_libssl -output $OUTPUT/catalyst/lib/libssl.a"
+  echo $lipo_libssl
+  eval $lipo_libssl
+
+  lipo_libcrypto="$lipo_libcrypto -output $OUTPUT/catalyst/lib/libcrypto.a"
+  echo $lipo_libcrypto
+  eval $lipo_libcrypto
+
+  XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -library $OUTPUT/catalyst/lib/libssl.a"
+  XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -headers $OUTPUT/catalyst/include"
+
+  XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -library $OUTPUT/catalyst/lib/libcrypto.a"
+  XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -headers $OUTPUT/catalyst/include"
+fi
+
+if [ ${#macos[@]} -gt 0 ]; then
+  lipo_libssl="lipo -create "
+  lipo_libcrypto="lipo -create "
+
+  framework_targets+=("macos")
+  mkdir -p $OUTPUT/macos/lib
+  mkdir -p $OUTPUT/macos/include
+
+  for target in "${macos[@]}"
+  do
+    lipo_libssl="$lipo_libssl $OUTPUT/$target/lib/libssl.a"
+    lipo_libcrypto="$lipo_libcrypto $OUTPUT/$target/lib/libcrypto.a"
+    rsync -a $OUTPUT/$target/include/* $OUTPUT/macos/include
+  done
+
+  lipo_libssl="$lipo_libssl -output $OUTPUT/macos/lib/libssl.a"
+  echo $lipo_libssl
+  eval $lipo_libssl
+
+  lipo_libcrypto="$lipo_libcrypto -output $OUTPUT/macos/lib/libcrypto.a"
+  echo $lipo_libcrypto
+  eval $lipo_libcrypto
+
+  XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -library $OUTPUT/macos/lib/libssl.a"
+  XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -headers $OUTPUT/macos/include"
+
+  XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -library $OUTPUT/macos/lib/libcrypto.a"
+  XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -headers $OUTPUT/macos/include"
+fi
+
+if [ ${#simulator[@]} -gt 0 ]; then
+  lipo_libssl="lipo -create "
+  lipo_libcrypto="lipo -create "
+
+  framework_targets+=("simulator")
+  mkdir -p $OUTPUT/simulator/lib
+  mkdir -p $OUTPUT/simulator/include
+
+  for target in "${simulator[@]}"
+  do
+    lipo_libssl="$lipo_libssl $OUTPUT/$target/lib/libssl.a"
+    lipo_libcrypto="$lipo_libcrypto $OUTPUT/$target/lib/libcrypto.a"
+    rsync -a $OUTPUT/$target/include/* $OUTPUT/simulator/include
+  done
+
+  lipo_libssl="$lipo_libssl -output $OUTPUT/simulator/lib/libssl.a"
+  echo $lipo_libssl
+  eval $lipo_libssl
+
+  lipo_libcrypto="$lipo_libcrypto -output $OUTPUT/simulator/lib/libcrypto.a"
+  echo $lipo_libcrypto
+  eval $lipo_libcrypto
+
+  XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -library $OUTPUT/simulator/lib/libssl.a"
+  XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -headers $OUTPUT/simulator/include"
+
+  XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -library $OUTPUT/simulator/lib/libcrypto.a"
+  XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -headers $OUTPUT/simulator/include"
+fi
+
+XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -output $XCFRAMEWORKS/libssl.xcframework"
+XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -output $XCFRAMEWORKS/libcrypto.xcframework"
 
 
-XCFRAMEWORK_CMD="xcodebuild -create-xcframework"
-for target in "${libressl_link_targets[@]}"
-do
-  XCFRAMEWORK_CMD="$XCFRAMEWORK_CMD -library $OUTPUT/$target/lib/libssl.a"
-  XCFRAMEWORK_CMD="$XCFRAMEWORK_CMD -headers $OUTPUT/$target/include"
-done
-XCFRAMEWORK_CMD="$XCFRAMEWORK_CMD -output $XCFRAMEWORKS/libssl.xcframework"
-printf "\n\n--> XCFramework"
-echo $XCFRAMEWORK_CMD
-eval $XCFRAMEWORK_CMD
+echo $XCFRAMEWORK_LIBSSL_CMD
+eval $XCFRAMEWORK_LIBSSL_CMD
+echo $XCFRAMEWORK_LIBCRYPTO_CMD
+eval $XCFRAMEWORK_LIBCRYPTO_CMD
 
 
 cd ..
