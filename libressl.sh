@@ -37,12 +37,14 @@ declare -a appleSiliconTargets=("simulator_arm64" "simulator_x86_64" "catalyst_x
 
 if [ -z "$libressl_build_targets" ]
 then
-  declare -a libressl_build_targets=("simulator_x86_64" "catalyst_x86_64" "macos_x86_64" "ios-arm64")
+  #declare -a libressl_build_targets=("simulator_x86_64" "simulator_arm64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
+  declare -a libressl_build_targets=("simulator_x86_64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
 fi
 
 if [ -z "$libressl_link_targets" ]
 then
-  declare -a libressl_link_targets=("simulator_x86_64" "catalyst_x86_64" "macos_x86_64" "ios-arm64")
+  #declare -a libressl_link_targets=("simulator_x86_64" "simulator_arm64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
+  declare -a libressl_link_targets=("simulator_x86_64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
 fi
 
 set -e
@@ -188,7 +190,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   DEVROOT=$XCODE/Platforms/iPhoneSimulator.platform/Developer
   SDKROOT=$DEVROOT/SDKs/iPhoneSimulator${IOS}.sdk
 
-  ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
+  ./configure --build=aarch64-apple-darwin --host=aarch64-apple-darwin22 --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang" \
     CPPFLAGS="-I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
@@ -302,7 +304,6 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
 
 fi;
 
-# TODO: Fails on latest Big Sur
 #############################################
 ##  macOS Catalyst arm64 libssl Compilation
 #############################################
@@ -315,7 +316,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
   SDKROOT=$DEVROOT/SDKs/MacOSX${MACOSX}.sdk
 
-  ./configure --prefix="$PREFIX/$target" \
+  ./configure --build=aarch64-apple-darwin --host=aarch64-apple-darwin22 --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang -target arm64-apple-ios${IOS}-macabi -isysroot $SDKROOT" \
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64 -pipe -no-cpp-precomp" \
