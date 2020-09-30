@@ -2,12 +2,12 @@
 
 # edit these version numbers to suit your needs, or define them before running the script
 
-echo "LIBRESSL_BUILD_TARGETS environment variable can be set as a string split by ':' as you would a PATH variable. Ditto LIBRESSL_LINK_TARGETS"
+echo "BUILD_TARGETS environment variable can be set as a string split by ':' as you would a PATH variable. Ditto LINK_TARGETS"
 # example: 
-#   export LIBRESSL_BUILD_TARGETS="simulator_x86_64:catalyst_x86_64:macos_x86_64:ios-arm64e"
+#   export BUILD_TARGETS="simulator_x86_64:catalyst_x86_64:macos_x86_64:ios-arm64e"
 
-IFS=':' read -r -a libressl_build_targets <<< "$LIBRESSL_BUILD_TARGETS"
-IFS=':' read -r -a libressl_link_targets <<< "$LIBRESSL_LINK_TARGETS"
+IFS=':' read -r -a libressl_build_targets <<< "$BUILD_TARGETS"
+IFS=':' read -r -a libressl_link_targets <<< "$LINK_TARGETS"
 
 if [ -z "$IOS" ]
 then
@@ -21,7 +21,7 @@ fi
 
 if [ -z "$LIBRESSL" ]
 then
-  LIBRESSL=3.0.2
+  LIBRESSL=3.0.4
   #LIBRESSL=3.1.4
   #LIBRESSL=3.2.1
 fi
@@ -190,9 +190,10 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   DEVROOT=$XCODE/Platforms/iPhoneSimulator.platform/Developer
   SDKROOT=$DEVROOT/SDKs/iPhoneSimulator${IOS}.sdk
 
-  ./configure --build=aarch64-apple-darwin --host=aarch64-apple-darwin22 --prefix="$PREFIX/$target" \
-    CC="/usr/bin/clang" \
-    CPPFLAGS="-I$SDKROOT/usr/include/" \
+  #./configure --build=aarch64-apple-darwin --host=aarch64-apple-darwin22 --prefix="$PREFIX/$target" \
+  ./configure --prefix="$PREFIX/$target" \
+    CC="/usr/bin/clang -target arm64-apple-ios${IOS}-simulator" \
+    CPPFLAGS="-I$SDKROOT/usr/include/ -target arm64-apple-ios${IOS}-simulator" \
     CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
     LD=$DEVROOT/usr/bin/ld
@@ -216,7 +217,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   SDKROOT=$DEVROOT/SDKs/iPhoneSimulator${IOS}.sdk
 
   ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
-    CC="/usr/bin/clang" \
+    CC="/usr/bin/clang -target arm64-apple-ios${IOS}-simulator" \
     CPPFLAGS="-I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
