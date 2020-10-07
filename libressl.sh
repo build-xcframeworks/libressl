@@ -21,7 +21,7 @@ fi
 
 if [ -z "$LIBRESSL" ]
 then
-  LIBRESSL=3.0.4
+  LIBRESSL=3.0.2
   #LIBRESSL=3.1.4
   #LIBRESSL=3.2.1
 fi
