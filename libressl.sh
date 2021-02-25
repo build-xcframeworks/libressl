@@ -21,9 +21,9 @@ fi
 
 if [ -z "$LIBRESSL" ]
 then
-  LIBRESSL=3.0.2
+  #LIBRESSL=3.0.2
   #LIBRESSL=3.1.4
-  #LIBRESSL=3.2.1
+  LIBRESSL=3.2.4
 fi
 
 if [ -z "$MACOSX" ]
@@ -394,7 +394,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   DEVROOT=$XCODE/Platforms/MacOSX.platform/Developer
   SDKROOT=$DEVROOT/SDKs/MacOSX${MACOSX}.sdk
 
-  ./configure --prefix="$PREFIX/$target" \
+  ./configure --host=arm-apple-darwin --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang -isysroot $SDKROOT" \
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64 -pipe -no-cpp-precomp" \
