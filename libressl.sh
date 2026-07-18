@@ -19,11 +19,16 @@ then
   MIN_IOS_VERSION=13.0
 fi
 
+if [ -z "$MIN_CATALYST_VERSION" ]
+then
+  MIN_CATALYST_VERSION=13.1
+fi
+
 if [ -z "$LIBRESSL" ]
 then
   #LIBRESSL=3.0.2
   #LIBRESSL=3.1.4
-  LIBRESSL=3.2.4
+  LIBRESSL=4.3.2
 fi
 
 if [ -z "$MACOSX" ]
@@ -38,16 +43,18 @@ declare -a appleSiliconTargets=("simulator_arm64" "simulator_x86_64" "catalyst_x
 if [ -z "$libressl_build_targets" ]
 then
   #declare -a libressl_build_targets=("simulator_x86_64" "simulator_arm64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
-  declare -a libressl_build_targets=("simulator_x86_64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
+  declare -a libressl_build_targets=("simulator_arm64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
 fi
 
 if [ -z "$libressl_link_targets" ]
 then
   #declare -a libressl_link_targets=("simulator_x86_64" "simulator_arm64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
-  declare -a libressl_link_targets=("simulator_x86_64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
+  declare -a libressl_link_targets=("simulator_arm64" "catalyst_x86_64" "catalyst_arm64" "macos_x86_64" "macos_arm64" "ios-arm64")
 fi
 
 set -e
+
+JOBS=${JOBS:-$(sysctl -n hw.logicalcpu)}
 
 XCODE=`/usr/bin/xcode-select -p`
 
@@ -55,6 +62,9 @@ XCODE=`/usr/bin/xcode-select -p`
 if [ ! -e "libressl-$LIBRESSL.tar.gz" ]
 then
     curl -OL "https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-${LIBRESSL}.tar.gz"
+fi
+if [ ! -d "libressl-$LIBRESSL" ]
+then
     tar -zxf "libressl-${LIBRESSL}.tar.gz"
 fi
 
@@ -93,8 +103,12 @@ elementIn () { # source https://stackoverflow.com/questions/3685970/check-if-a-b
 
 makeLibreSSL() {
   # only build the files we need (libcrypto, libssl, include files)
-  make -C crypto clean all install
-  make -C ssl clean all install
+  make -C crypto clean
+  make -j "$JOBS" -C crypto all
+  make -C crypto install
+  make -C ssl clean
+  make -j "$JOBS" -C ssl all
+  make -C ssl install
   make -C include install
 }
 
@@ -106,28 +120,12 @@ moveLibreSSLOutputInPlace() {
   rsync -am --include='*.h' -f 'hide,! */' include/* $OUTPUT/$target/include
 }
 
-needsRebuilding() {
-  local target=$1
-  test crypto/.libs/libcrypto.a -nt Makefile
-  timestampCompare=$?
-  if [ $timestampCompare -eq 1 ]; then
-    return 0
-  else
-    arch=`/usr/bin/lipo -archs crypto/.libs/libcrypto.a`
-    if [ "$arch" == "$target" ]; then
-      return 1
-    else
-      return 0
-    fi
-  fi
-}
-
 ##############################################
 ##  iOS Simulator x86_64h libssl Compilation
 ##############################################
 
 target=simulator_x86_64h
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
 
   printf "\n\n--> iOS Simulator x86_64h libssl Compilation"
@@ -153,7 +151,7 @@ fi;
 #############################################
 
 target=simulator_x86_64
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> iOS Simulator x86_64 libssl Compilation"
 
@@ -183,7 +181,7 @@ fi;
 #############################################
 
 target=simulator_arm64e
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> iOS Simulator arm64e libssl Compilation"
 
@@ -192,8 +190,8 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
 
   #./configure --build=aarch64-apple-darwin --host=aarch64-apple-darwin22 --prefix="$PREFIX/$target" \
   ./configure --prefix="$PREFIX/$target" \
-    CC="/usr/bin/clang -target arm64-apple-ios${IOS}-simulator" \
-    CPPFLAGS="-I$SDKROOT/usr/include/ -target arm64-apple-ios${IOS}-simulator" \
+    CC="/usr/bin/clang -target arm64-apple-ios${MIN_IOS_VERSION}-simulator" \
+    CPPFLAGS="-I$SDKROOT/usr/include/ -target arm64-apple-ios${MIN_IOS_VERSION}-simulator" \
     CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
     LD=$DEVROOT/usr/bin/ld
@@ -209,15 +207,15 @@ fi;
 #############################################
 
 target=simulator_arm64
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> iOS Simulator arm64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/iPhoneSimulator.platform/Developer
   SDKROOT=$DEVROOT/SDKs/iPhoneSimulator${IOS}.sdk
 
-  ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
-    CC="/usr/bin/clang -target arm64-apple-ios${IOS}-simulator" \
+  ac_cv_func_strtonum=no ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
+    CC="/usr/bin/clang -target arm64-apple-ios${MIN_IOS_VERSION}-simulator" \
     CPPFLAGS="-I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
@@ -235,14 +233,14 @@ fi;
 ##################################
 
 target=ios-arm64
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> iOS arm64 libssl Compilation"
 
   DEVROOT=$XCODE/Platforms/iPhoneOS.platform/Developer
   SDKROOT=$DEVROOT/SDKs/iPhoneOS${IOS}.sdk
 
-  ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
+  ac_cv_func_strtonum=no ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
     CC="/usr/bin/clang -isysroot $SDKROOT" \
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp" \
@@ -285,7 +283,7 @@ fi;
 ##############################################
 
 target=catalyst_x86_64
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> macOS Catalyst x86_64 libssl Compilation"
 
@@ -293,7 +291,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   SDKROOT=$DEVROOT/SDKs/MacOSX${MACOSX}.sdk
 
   ./configure --prefix="$PREFIX/$target" \
-    CC="/usr/bin/clang -target x86_64-apple-ios${IOS}-macabi -isysroot $SDKROOT" \
+    CC="/usr/bin/clang -target x86_64-apple-ios${MIN_CATALYST_VERSION}-macabi -isysroot $SDKROOT" \
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch x86_64 -pipe -no-cpp-precomp" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
@@ -310,7 +308,7 @@ fi;
 #############################################
 
 target=catalyst_arm64
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> macOS Catalyst arm64 libssl Compilation"
 
@@ -318,7 +316,7 @@ if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]
   SDKROOT=$DEVROOT/SDKs/MacOSX${MACOSX}.sdk
 
   ./configure --build=aarch64-apple-darwin --host=aarch64-apple-darwin22 --prefix="$PREFIX/$target" \
-    CC="/usr/bin/clang -target arm64-apple-ios${IOS}-macabi -isysroot $SDKROOT" \
+    CC="/usr/bin/clang -target arm64-apple-ios${MIN_CATALYST_VERSION}-macabi -isysroot $SDKROOT" \
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64 -pipe -no-cpp-precomp" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
@@ -336,7 +334,7 @@ fi;
 #####################################
 
 target=macos_x86_64
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> macOS x86_64 libssl Compilation"
 
@@ -362,7 +360,7 @@ fi;
 ######################################
 
 target=macos_x86_64h
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> macOS x86_64h libssl Compilation"
 
@@ -387,7 +385,7 @@ fi;
 #####################################
 
 target=macos_arm64
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> macOS arm64 libssl Compilation"
 
@@ -413,7 +411,7 @@ fi;
 #####################################
 
 target=macos_arm64e
-if needsRebuilding "$target" && elementIn "$target" "${libressl_build_targets[@]}"; then
+if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   printf "\n\n--> macOS arm64e libssl Compilation"
 
