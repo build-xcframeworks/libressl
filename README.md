@@ -1,5 +1,5 @@
 # LibreSSL XCFramework for iOS, macOS & Catalyst
-A script to compile LibreSSL 4.3.2 to XCFrameworks for iOS, Apple-silicon iOS Simulator, macOS, and Mac Catalyst.
+A script to compile LibreSSL 4.4.0 to XCFrameworks for iOS, Apple-silicon iOS Simulator, macOS, and Mac Catalyst.
 
 Instructions:
 1. Clone:

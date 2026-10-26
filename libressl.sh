@@ -28,7 +28,7 @@ if [ -z "$LIBRESSL" ]
 then
   #LIBRESSL=3.0.2
   #LIBRESSL=3.1.4
-  LIBRESSL=4.3.2
+  LIBRESSL=4.4.0
 fi
 
 if [ -z "$MACOSX" ]
@@ -56,7 +56,7 @@ set -e
 
 JOBS=${JOBS:-$(sysctl -n hw.logicalcpu)}
 
-XCODE=`/usr/bin/xcode-select -p`
+XCODE=${DEVELOPER_DIR:-$(/usr/bin/xcode-select -p)}
 
 # download LibreSSL
 if [ ! -e "libressl-$LIBRESSL.tar.gz" ]
@@ -138,7 +138,7 @@ if elementIn "$target" "${libressl_build_targets[@]}"; then
     CPPFLAGS="-I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch x86_64h -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
-    LD=$DEVROOT/usr/bin/ld
+    LD=/usr/bin/ld
 
   makeLibreSSL
   printf "\n\n--> XX iOS Simulator x86_64h libssl Compilation"
@@ -168,7 +168,7 @@ if elementIn "$target" "${libressl_build_targets[@]}"; then
     CPPFLAGS="-I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch x86_64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
-    LD=$DEVROOT/usr/bin/ld
+    LD=/usr/bin/ld
 
   makeLibreSSL
   echo -printf "\n\n--> XX iOS Simulator x86_64 libssl Compilation"
@@ -190,11 +190,11 @@ if elementIn "$target" "${libressl_build_targets[@]}"; then
 
   #./configure --build=aarch64-apple-darwin --host=aarch64-apple-darwin22 --prefix="$PREFIX/$target" \
   ./configure --prefix="$PREFIX/$target" \
-    CC="/usr/bin/clang -target arm64-apple-ios${MIN_IOS_VERSION}-simulator" \
+    CC="/usr/bin/clang -target arm64-apple-ios${MIN_IOS_VERSION}-simulator -isysroot $SDKROOT" \
     CPPFLAGS="-I$SDKROOT/usr/include/ -target arm64-apple-ios${MIN_IOS_VERSION}-simulator" \
     CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
-    LD=$DEVROOT/usr/bin/ld
+    LD=/usr/bin/ld
 
   makeLibreSSL
   printf "\n\n--> XX iOS Simulator arm64e libssl Compilation"
@@ -215,11 +215,11 @@ if elementIn "$target" "${libressl_build_targets[@]}"; then
   SDKROOT=$DEVROOT/SDKs/iPhoneSimulator${IOS}.sdk
 
   ac_cv_func_strtonum=no ./configure --host=aarch64-apple-darwin --prefix="$PREFIX/$target" \
-    CC="/usr/bin/clang -target arm64-apple-ios${MIN_IOS_VERSION}-simulator" \
+    CC="/usr/bin/clang -target arm64-apple-ios${MIN_IOS_VERSION}-simulator -isysroot $SDKROOT" \
     CPPFLAGS="-I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp -isysroot $SDKROOT" \
     CPP="/usr/bin/cpp $CPPFLAGS" \
-    LD=$DEVROOT/usr/bin/ld
+    LD=/usr/bin/ld
 
   makeLibreSSL
   printf "\n\n--> XX iOS Simulator arm64 libssl Compilation"
@@ -245,7 +245,7 @@ if elementIn "$target" "${libressl_build_targets[@]}"; then
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64 -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp" \
     CPP="/usr/bin/cpp -D__arm__=1 $CPPFLAGS" \
-    LD=$DEVROOT/usr/bin/ld
+    LD=/usr/bin/ld
 
   makeLibreSSL
   printf "\n\n--> XX iOS arm64 libssl Compilation"
@@ -270,7 +270,7 @@ if elementIn "$target" "${libressl_build_targets[@]}"; then
     CPPFLAGS="-fembed-bitcode -I$SDKROOT/usr/include/" \
     CFLAGS="$CPPFLAGS -arch arm64e -miphoneos-version-min=${MIN_IOS_VERSION} -pipe -no-cpp-precomp" \
     CPP="/usr/bin/cpp -D__arm__=1 $CPPFLAGS" \
-    LD=$DEVROOT/usr/bin/ld
+    LD=/usr/bin/ld
 
   makeLibreSSL
   printf "\n\n--> XX iOS arm64e libssl Compilation"
@@ -589,6 +589,7 @@ XCFRAMEWORK_LIBSSL_CMD="$XCFRAMEWORK_LIBSSL_CMD -output $XCFRAMEWORKS/libssl.xcf
 XCFRAMEWORK_LIBCRYPTO_CMD="$XCFRAMEWORK_LIBCRYPTO_CMD -output $XCFRAMEWORKS/libcrypto.xcframework"
 
 
+rm -R -f $XCFRAMEWORKS/libssl.xcframework $XCFRAMEWORKS/libcrypto.xcframework
 echo $XCFRAMEWORK_LIBSSL_CMD
 eval $XCFRAMEWORK_LIBSSL_CMD
 echo $XCFRAMEWORK_LIBCRYPTO_CMD
